@@ -53,8 +53,8 @@ dt = 1E-3; % (s) DO NOT CHANGE THIS
 
 % oneA(x0,dt,Data)
 % oneB(x0,dt,Data,VrB);
-fourOne(x0,dt,Data,VrB);
-
+% fourOne(x0,dt,Data,VrB);
+fourTwo(x0,dt,Data,VrB);
 
 % ################ 1A #################
 
@@ -101,6 +101,7 @@ function y = oneB(x0,dt,Data,VrB)
 	%     disp(xr(end))
 	 	distHist = [distHist xr(end)];
 	 end
+	 % max(distHist)
 		if xr(end) >= 50
 			minWforReqDistList = [minWforReqDistList interp1(distHist,mwRange,50)];
 		end
@@ -136,6 +137,7 @@ function y = fourOne(x0,dt,Data,VrB)
 %         disp(designs(k,2))
  		Data.CD = designs(k,1); % Drag coefficient
  		Data.mr = designs(k,2); % Rocket mass including payload, just not water (kg)
+ 		VrB = sqrt(2*(W/Data.mr - g*lrod*sin(alpha0)));
 
 		mwRange = linspace(0.02,1,10);
 		alphaRange = linspace(30,60,10);
@@ -188,6 +190,123 @@ function y = fourOne(x0,dt,Data,VrB)
 
 end
 
+function y = fourTwo(x0,dt,Data,VrB)
+	% distHist = [];
+	% Call integrator
+	mwOpt = 0.3878;
+	alphaOpt = 43.3333;
+
+	certainD = 50.1251;
+	result = []
+	uncertaintyMap = {'dpA', 5, 	0,	0;
+	 				  'mr',      1, 	0,	0;
+	 				  'CD',      10,	0,	0;
+	 				  'Ae',      2, 	0,	0;
+	 				  'Vb',      4, 	0,	0;
+	 				  'mw',      6, 	0,	0;
+	 				  'alpha0',   4, 	0,	0;
+                      };
+
+    for k=1:length(uncertaintyMap)
+    	% Set (user) inputs
+		Data = setinputs_rocket();
+    	mapStr = uncertaintyMap{k,1};
+    	pertubationSign = 1;
+    	pertubation = 1+pertubationSign*(cell2mat(uncertaintyMap(k,2))/100)
+    	if strcmp(mapStr,'dpA') 
+ 			Data.dpA = Data.dpA*pertubation; 	
+    	end
+    	if strcmp(mapStr,'mr') 
+ 			Data.mr = Data.mr*pertubation;	
+    	end
+    	if strcmp(mapStr,'CD') 
+ 			Data.CD = Data.CD*pertubation;	
+    	end
+    	if strcmp(mapStr,'Ae') 
+ 			Data.Ae = Data.Ae*pertubation;	
+    	end
+    	if strcmp(mapStr,'Vb') 
+ 			Data.Vb = Data.Vb*pertubation;
+    	end
+    	if strcmp(mapStr,'mw') 
+ 			mwOpt = mwOpt*pertubation;	
+    	end
+    	if strcmp(mapStr,'alpha0') 
+ 			alphaOpt = alphaOpt*pertubation; 	
+    	end
+    	% Main function to integrate water rocket test stand behavior
+
+		% The following are technically input parameters, but should not
+		% be adjusted
+		Data.g = 9.81; % gravity (m/s^2)
+		Data.rhow = 1E3; % Water density (kg/m^3)
+		Data.patm = 1.01E5; % Atmospheric pressure (Pa)
+		Data.rho = 1.22; % atmospheric air density (kg/m^3)
+		Data.gamma = 1.4; % Specific heat ratio for air
+		Data.lrod = 0.15; % Length of launch rod (m)
+
+		% Calculate some additional quantities needed for the simulation
+		Data.Vw0 = Data.mw0/Data.rhow; % Initial water volume
+		Data.Va0 = Data.Vb - Data.Vw0; % Initial air volume
+		Data.paA = Data.patm + Data.dpA; % Initial air pressure (Pa)
+
+		% Determine velocity at end of launch rod from energy balance
+		% First determine the work during this phase
+		gamma = Data.gamma; % Specific heat ratio for air
+		paA = Data.paA; % Initial air pressure
+		VaA = Data.Va0; % Initial air volume
+		Ae = Data.Ae; % Cross-sectional area of exhaust nozzle
+		lrod = Data.lrod; % Length of launch rod
+		patm = Data.patm; % Atmospheric pressure
+		mr = Data.mr; % Mass of rocket
+		g = Data.g; % gravity
+		% Data.alpha0 = 45.0;
+		alpha0 = Data.alpha0*pi/180; % initial launch angle (in radians)
+
+		VaB = VaA + Ae*lrod;
+		W = 1/(gamma-1)*paA*VaA*(1 - (VaA/VaB)^(gamma-1)) - patm*(VaB-VaA);
+
+		% Now determine the velocity at the end of the rod
+		VrB = sqrt(2*(W/mr - g*lrod*sin(alpha0)));
+
+		% Set initial pressure
+		Data.pa0 = paA*(VaA/VaB)^(gamma);
+
+		% Uncomment these if the rod is assumed to fill with water only
+		% (otherwise, the approach assumes the rod is filled with air only)
+		%Data.Va0 = VaB;
+		%Data.Vw0 = Data.Vw0-Ae*lrod;
+
+		% Set initial condition vector
+		x0 = [Data.mw0, Data.lrod*sin(alpha0), VrB*sin(alpha0), Data.lrod*cos(alpha0), VrB*cos(alpha0) ];
+
+		% Set timestep 
+		dt = 1E-3; % (s) DO NOT CHANGE THIS
+
+    	
+		Data.alpha0 = alphaOpt;
+		alpha0 = Data.alpha0*pi/180; % initial launch angle (in radians)
+		x0 = [Data.mw0, Data.lrod*sin(alpha0), VrB*sin(alpha0), Data.lrod*cos(alpha0), VrB*cos(alpha0) ];
+	    x0(1) = mwOpt;
+	    [x,t] = FE_rocket(x0,dt,Data);
+	    xr = x(4,:);
+	    % disp(xr(end))
+	    errorDist = xr(end)-certainD;
+	    disp(errorDist)
+	    result = [result [mapStr,string(errorDist)]]
+    end
+
+    % disp(cell2mat(uncertaintyMap(2,3))*5)
+	% minWforReqDist = interp1(distHist,mwRange,50);
+	% disp('Minimum water mass required for distance with baseline values:');
+	% disp(minWforReqDist);
+	% figure;
+	% plot(mwRange,distHist);
+	% title('Distance traveled for fixed launch angle');
+	% xlabel('Water mass m_w (kg)');
+	% ylabel('Distance traveled (m)');
+	% y = 1;
+end
 
 % disp(distHist)
 % Unpack states

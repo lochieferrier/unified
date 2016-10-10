@@ -1,4 +1,4 @@
 Data log
 1a) The minimum water required is 0.3905 kg
-1b) Minimum water requirement is 0.3878 kg @ 43.3333 degrees
+1b) Minimum water requirement, optimizing for angle is 0.3878 kg @ 43.3333 degrees
 
