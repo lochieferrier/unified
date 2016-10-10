@@ -52,7 +52,9 @@ dt = 1E-3; % (s) DO NOT CHANGE THIS
 
 
 % oneA(x0,dt,Data)
-oneB(x0,dt,Data,VrB);
+% oneB(x0,dt,Data,VrB);
+fourOne(x0,dt,Data,VrB);
+
 
 % ################ 1A #################
 
@@ -82,23 +84,23 @@ end
 
 function y = oneB(x0,dt,Data,VrB)
 	mwRange = linspace(0.3,0.4,10);
-	alphaRange = linspace(40,50,10);
+	alphaRange = linspace(40,47,10);
 	minWforReqDistList = [];
 	% Call integrator
 	for alphaPt = alphaRange
 %  		disp(alphaPt);
-		distHist = [];
-		Data.alpha0 = alphaPt(1);
-		alpha0 = Data.alpha0*pi/180; % initial launch angle (in radians)
-		x0 = [Data.mw0, Data.lrod*sin(alpha0), VrB*sin(alpha0), Data.lrod*cos(alpha0), VrB*cos(alpha0) ];
+	distHist = [];
+	Data.alpha0 = alphaPt(1);
+	alpha0 = Data.alpha0*pi/180; % initial launch angle (in radians)
+	x0 = [Data.mw0, Data.lrod*sin(alpha0), VrB*sin(alpha0), Data.lrod*cos(alpha0), VrB*cos(alpha0) ];
 
-		for mw = mwRange
-		    x0(1) = mw;
-		    [x,t] = FE_rocket(x0,dt,Data);
-		    xr = x(4,:);
-		%     disp(xr(end))
-		 	distHist = [distHist xr(end)];
-		end
+	for mw = mwRange
+	    x0(1) = mw;
+	    [x,t] = FE_rocket(x0,dt,Data);
+	    xr = x(4,:);
+	%     disp(xr(end))
+	 	distHist = [distHist xr(end)];
+	 end
 		if xr(end) >= 50
 			minWforReqDistList = [minWforReqDistList interp1(distHist,mwRange,50)];
 		end
@@ -119,7 +121,72 @@ function y = oneB(x0,dt,Data,VrB)
 	y = 1;
 end
 
+function y = fourOne(x0,dt,Data,VrB)
+	C_D_baseline = 0.5
+	C_D_low = 0.25
+	m_r_baseline = 0.4
+	m_r_low =  0.184
+	figure;
+	designs = [[C_D_baseline, m_r_low],
+					 [C_D_low,	   m_r_baseline],
+					 [C_D_low,      m_r_low]];
+	% results = []
+	disp(designs)
+	for k=1:length(designs)
+%         disp(designs(k,2))
+ 		Data.CD = designs(k,1); % Drag coefficient
+ 		Data.mr = designs(k,2); % Rocket mass including payload, just not water (kg)
 
+		mwRange = linspace(0.02,1,10);
+		alphaRange = linspace(30,60,10);
+		minWforReqDistList = [];
+		% Call integrator
+		for alphaPt = alphaRange
+			% disp(alphaPt);
+			distHist = [];
+			Data.alpha0 = alphaPt(1);
+			alpha0 = Data.alpha0*pi/180; % initial launch angle (in radians)
+			x0 = [Data.mw0, Data.lrod*sin(alpha0), VrB*sin(alpha0), Data.lrod*cos(alpha0), VrB*cos(alpha0) ];
+
+			for mw = mwRange
+			    x0(1) = mw;
+			    [x,t] = FE_rocket(x0,dt,Data);
+			    xr = x(4,:);
+			%     disp(xr(end))
+			 	distHist = [distHist xr(end)];
+			end
+			distHist;
+			mwRange;
+			if xr(end) >= 50
+				minWforReqDistList = [minWforReqDistList interp1(distHist,mwRange,50)];
+				% disp('found candidate')
+			end
+			if xr(end) < 50
+				disp('failed to make the distance')
+			end
+		end
+		subplot(310+k)
+		plot(alphaRange,minWforReqDistList)
+ 		disp('Design')
+        disp(k)
+        disp(min(minWforReqDistList))
+        disp(interp1(minWforReqDistList,alphaRange,min(minWforReqDistList)));
+		% disp('Minimum water mass required for distance with baseline values:');
+		% disp(minWforReqDist);
+		% figure;
+		% plot(alphaRange,minWforReqDistList);
+		% title('Water and launch angle tradeoff for 50 m flight distance');
+		% xlabel('Initial launch angle (degrees)');
+		% ylabel('Minimum water mass (kg)');
+	 %    disp('Minimum water requirement: ');
+	 %    newResult = [];
+	 %    newResult = [newResult min(minWforReqDistList)];
+		% newResult = [newResult interp1(minWforReqDistList,alphaRange,min(minWforReqDistList))];
+		% disp(newResult)
+	end			 
+	y = 1;
+
+end
 
 
 % disp(distHist)
