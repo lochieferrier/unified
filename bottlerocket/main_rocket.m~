@@ -49,14 +49,23 @@ x0 = [Data.mw0, Data.lrod*sin(alpha0), VrB*sin(alpha0), Data.lrod*cos(alpha0), V
 % Set timestep 
 dt = 1E-3; % (s) DO NOT CHANGE THIS
 
+distHist = []
+mwRange = linspace(0.1,0.7)
 % Call integrator
-for mw = 1:100
-    
+for mw = mwRange
+    x0(1) = mw;
     [x,t] = FE_rocket(x0,dt,Data);
     xr = x(4,:);
-    disp(xr(end))
+%     disp(xr(end))
+ 	distHist = [distHist xr(end)]
 end
-
+minWforReqDist = interp1q(distHis)
+figure
+plot(mwRange,distHist)
+title('Distance traveled for fixed launch angle')
+xlabel('Water mass m_w (kg)')
+ylabel('Distance traveled (m)')
+% disp(distHist)
 % Unpack states
 mw = x(1,:);
 zr = x(2,:);
@@ -66,7 +75,7 @@ ur = x(5,:);
 
 % Find distance traveled (which will be final value of xr in xr array)
 xmax = xr(end);
-fprintf(1,'Distance traveled = %5.2f m\n',xmax);
+% fprintf(1,'Distance traveled = %5.2f m\n',xmax);
 
 % % Find maximum height
 % zmax = max(zr);

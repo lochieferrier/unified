@@ -27,6 +27,7 @@ lrod = Data.lrod; % Length of launch rod
 patm = Data.patm; % Atmospheric pressure
 mr = Data.mr; % Mass of rocket
 g = Data.g; % gravity
+% Data.alpha0 = 45.0;
 alpha0 = Data.alpha0*pi/180; % initial launch angle (in radians)
 
 VaB = VaA + Ae*lrod;
@@ -49,24 +50,91 @@ x0 = [Data.mw0, Data.lrod*sin(alpha0), VrB*sin(alpha0), Data.lrod*cos(alpha0), V
 % Set timestep 
 dt = 1E-3; % (s) DO NOT CHANGE THIS
 
-% Call integrator
-for mw = 1:100
-    
-    [x,t] = FE_rocket(x0,dt,Data);
-    xr = x(4,:);
-    disp(xr(end))
+
+% oneA(x0,dt,Data)
+oneB(x0,dt,Data,VrB);
+
+% ################ 1A #################
+
+function y = oneA(x0,dt,Data)
+	distHist = [];
+	mwRange = linspace(0.1,0.7);
+	% Call integrator
+	for mw = mwRange
+	    x0(1) = mw;
+	    [x,t] = FE_rocket(x0,dt,Data);
+	    xr = x(4,:);
+	%     disp(xr(end))
+	 	distHist = [distHist xr(end)];
+	end
+	minWforReqDist = interp1(distHist,mwRange,50);
+	disp('Minimum water mass required for distance with baseline values:');
+	disp(minWforReqDist);
+	figure;
+	plot(mwRange,distHist);
+	title('Distance traveled for fixed launch angle');
+	xlabel('Water mass m_w (kg)');
+	ylabel('Distance traveled (m)');
+	y = 1;
+end
+%################# 1B ################
+
+
+function y = oneB(x0,dt,Data,VrB)
+	mwRange = linspace(0.3,0.4,10);
+	alphaRange = linspace(40,50,10);
+	minWforReqDistList = [];
+	% Call integrator
+	for alphaPt = alphaRange
+%  		disp(alphaPt);
+		distHist = [];
+		Data.alpha0 = alphaPt(1);
+		alpha0 = Data.alpha0*pi/180; % initial launch angle (in radians)
+		x0 = [Data.mw0, Data.lrod*sin(alpha0), VrB*sin(alpha0), Data.lrod*cos(alpha0), VrB*cos(alpha0) ];
+
+		for mw = mwRange
+		    x0(1) = mw;
+		    [x,t] = FE_rocket(x0,dt,Data);
+		    xr = x(4,:);
+		%     disp(xr(end))
+		 	distHist = [distHist xr(end)];
+		end
+		if xr(end) >= 50
+			minWforReqDistList = [minWforReqDistList interp1(distHist,mwRange,50)];
+		end
+		if xr(end) < 50
+			disp('failed to make the distance')
+		end
+	end
+	% disp('Minimum water mass required for distance with baseline values:');
+	% disp(minWforReqDist);
+	figure;
+	plot(alphaRange,minWforReqDistList);
+	title('Water and launch angle tradeoff for 50 m flight distance');
+	xlabel('Initial launch angle (degrees)');
+	ylabel('Minimum water mass (kg)');
+    disp('Minimum water requirement: ');
+    disp(min(minWforReqDistList));
+	disp(interp1(minWforReqDistList,alphaRange,min(minWforReqDistList)));
+	y = 1;
 end
 
-% Unpack states
-mw = x(1,:);
-zr = x(2,:);
-wr = x(3,:);
-xr = x(4,:);
-ur = x(5,:);
 
-% Find distance traveled (which will be final value of xr in xr array)
-xmax = xr(end);
-fprintf(1,'Distance traveled = %5.2f m\n',xmax);
+
+
+% disp(distHist)
+% Unpack states
+% mw = x(1,:);
+% zr = x(2,:);
+% wr = x(3,:);
+% xr = x(4,:);
+% ur = x(5,:);
+
+% % Find distance traveled (which will be final value of xr in xr array)
+% xmax = xr(end);
+
+
+% fprintf(1,'Distance traveled = %5.2f m\n',xmax);
 
 % % Find maximum height
 % zmax = max(zr);
