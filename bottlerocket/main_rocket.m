@@ -53,8 +53,8 @@ dt = 1E-3; % (s) DO NOT CHANGE THIS
 
 % oneA(x0,dt,Data)
 % oneB(x0,dt,Data,VrB);
-% fourOne(x0,dt,Data,VrB);
-fourTwo(x0,dt,Data,VrB);
+fourOne(x0,dt,Data,VrB);
+% fourTwo(x0,dt,Data,VrB);
 
 % ################ 1A #################
 
@@ -134,7 +134,22 @@ function y = fourOne(x0,dt,Data,VrB)
 	% results = []
 	disp(designs)
 	for k=1:length(designs)
-%         disp(designs(k,2))
+		% Determine velocity at end of launch rod from energy balance
+		% First determine the work during this phase
+		gamma = Data.gamma; % Specific heat ratio for air
+		paA = Data.paA; % Initial air pressure
+		VaA = Data.Va0; % Initial air volume
+		Ae = Data.Ae; % Cross-sectional area of exhaust nozzle
+		lrod = Data.lrod; % Length of launch rod
+		patm = Data.patm; % Atmospheric pressure
+		mr = Data.mr; % Mass of rocket
+		g = Data.g; % gravity
+		% Data.alpha0 = 45.0;
+		alpha0 = Data.alpha0*pi/180; % initial launch angle (in radians)
+
+		VaB = VaA + Ae*lrod;
+		W = 1/(gamma-1)*paA*VaA*(1 - (VaA/VaB)^(gamma-1)) - patm*(VaB-VaA);
+%       disp(designs(k,2))
  		Data.CD = designs(k,1); % Drag coefficient
  		Data.mr = designs(k,2); % Rocket mass including payload, just not water (kg)
  		VrB = sqrt(2*(W/Data.mr - g*lrod*sin(alpha0)));
