@@ -1,31 +1,19 @@
-
 from gpfit.fit import fit
 from numpy import logspace, log, log10, random
-import numpy as np
-import matplotlib.pyplot as plt
+from matplotlib import pyplot as plt
 # fixed initial guess for fitting
-# random.seed(33404)
+random.seed(33404)
 
-cd0 = 0.020
-cd1 = -0.004
-cd2 = 0.020
-cd8 = 1.0
-cl0 = 0.8
-
-cl = np.array(np.linspace(0.1,1.5,100))
-cd = cd0 + cd1*(cl-cl0) + cd2*(cl-cl0)**2 + cd8*(cl-cl0)**8
-
-K = 1
-
+cl = logspace(0, log10(3), 101)
+cd = (cl**2)
 x = log(cl)
 y = log(cd)
+K = 3
 
-# plt.plot(mdot,delta_p)
-# plt.show()
-cMA, errorMA = fit(x,y, K, "MA")
-cSMA, errorSMA = fit(x, y, K, "SMA")
-cISMA, errorISMA = fit(x, y, K, "ISMA")
+cMA, errorMA = fit(x, y, K, "MA")
+# cSMA, errorSMA = fit(x, y, K, "SMA")
+# cISMA, errorISMA = fit(x, y, K, "ISMA")
 
 print "MA RMS Error: %.5g" % errorMA
-print "SMA RMS Error: %.5g" % errorSMA
+# print "SMA RMS Error: %.5g" % errorSMA
 # print "ISMA RMS Error: %.5g" % errorISMA
